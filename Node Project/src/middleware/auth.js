@@ -1,0 +1,39 @@
+import jwt from "jsonwebtoken";
+import { config } from "../config";
+import { modals } from "../model";
+
+export const auth = async (req, res, next) => {
+
+    try {
+        let token = req?.headers?.["x-token"];
+        // console.log("token", token);
+        if (!token) throw new Error("Session invalid")
+        else {
+
+            const matchToken = await modals?.Token?.findOne({
+                token: { $in: [token] },
+
+            })
+            if (!matchToken) throw new Error("session invalid or expired");
+
+            let data = jwt.verify(token, config.secret_key);
+            // console.log("authdata", data);
+            const user = await modals.User.findById(data?.id);
+            // console.log("authuser", user);
+            req.me = user;
+            console.log("req", req.me);
+            next();
+        }
+
+    } catch (error) {
+        res.status(500).send({ success: false, data: null, message: error.message })
+
+    }
+}
+
+export const adminAuth = (req, res, next) => {
+    if (req.me.userType === "admin") next();
+    else throw new Error("you are not admin");
+
+
+}
